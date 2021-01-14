@@ -18,15 +18,19 @@ public class LobbyUIManager : MonoBehaviour
     protected void OnDisconnected(DisconnectInfo info)
     {
         DebugText.text = info.Reason.ToString();
+        LobbyUIParent.SetActive(true);
     }
 
     public void OnHostClicked()
     {
+        NetworkServer.Instance.StartServer();
+        NetworkClient.Instance.ConnectToServer("localhost", OnDisconnected);
         LobbyUIParent.SetActive(false);
     }
 
     public void OnConnectClicked()
     {
+        NetworkClient.Instance.ConnectToServer(IPField.text, OnDisconnected);
         LobbyUIParent.SetActive(false);
     }
 }
