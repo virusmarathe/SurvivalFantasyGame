@@ -5,6 +5,7 @@ using LiteNetLib;
 using System.Net;
 using System.Net.Sockets;
 using System;
+using LiteNetLib.Utils;
 
 public class NetworkClient : MonoBehaviour, INetEventListener
 {
@@ -12,15 +13,22 @@ public class NetworkClient : MonoBehaviour, INetEventListener
     public static NetworkClient Instance { get { return s_Instance; } }
 
     NetManager _netManager;
+    NetDataWriter _writer;
+    NetPacketProcessor _packetProcessor;
     Action<DisconnectInfo> _onDisconnected;
     NetPeer _server;
     int _ping;
+    string _userName;
 
 
     private void Awake()
     {
         if (s_Instance == null) s_Instance = this;
         DontDestroyOnLoad(gameObject);
+
+        _writer = new NetDataWriter();
+        _packetProcessor = new NetPacketProcessor();
+        _userName = Environment.MachineName + "_" + UnityEngine.Random.Range(0, 10000);
 
         _netManager = new NetManager(this)
         {
@@ -70,6 +78,8 @@ public class NetworkClient : MonoBehaviour, INetEventListener
     {
         Debug.Log("[C] Connected to server: " + peer.EndPoint);
         _server = peer;
+
+        SendPacket(new JoinPacket { UserName = _userName }, DeliveryMethod.ReliableOrdered);
     }
 
     public void OnPeerDisconnected(NetPeer peer, DisconnectInfo disconnectInfo)
@@ -81,5 +91,25 @@ public class NetworkClient : MonoBehaviour, INetEventListener
             _onDisconnected(disconnectInfo);
             _onDisconnected = null;
         }
+    }
+
+    public void SendPacketSerializable<T>(PacketType type, T packet, DeliveryMethod deliveryMethod) where T : INetSerializable
+    {
+        if (_server == null)
+            return;
+        _writer.Reset();
+        _writer.Put((byte)type);
+        packet.Serialize(_writer);
+        _server.Send(_writer, deliveryMethod);
+    }
+
+    public void SendPacket<T>(T packet, DeliveryMethod deliveryMethod) where T : class, new()
+    {
+        if (_server == null)
+            return;
+        _writer.Reset();
+        _writer.Put((byte)PacketType.Serialized);
+        _packetProcessor.Write(_writer, packet);
+        _server.Send(_writer, deliveryMethod);
     }
 }
