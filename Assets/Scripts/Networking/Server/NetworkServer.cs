@@ -11,18 +11,26 @@ public class NetworkServer : MonoBehaviour, INetEventListener
     static NetworkServer s_Instance;
     public static NetworkServer Instance { get { return s_Instance; } }
 
+    public const int MaxPlayers = 64;
+
     NetManager _netManager;
     NetDataWriter _writer;
     NetPacketProcessor _packetProcessor;
+    NetworkTimer _networkTimer;
+    ServerPlayerManager _playerManager;
 
+    ushort _serverTick;
 
     private void Awake()
     {
         if (s_Instance == null) s_Instance = this;
         DontDestroyOnLoad(gameObject);
 
+        _networkTimer = new NetworkTimer(OnNetworkUpdate);
         _writer = new NetDataWriter();
+        _playerManager = new ServerPlayerManager();
         _packetProcessor = new NetPacketProcessor();
+        _packetProcessor.RegisterNestedType<PlayerState>();
         _packetProcessor.SubscribeReusable<JoinPacket, NetPeer>(OnJoinReceived);
 
         _netManager = new NetManager(this)
@@ -36,11 +44,25 @@ public class NetworkServer : MonoBehaviour, INetEventListener
         if (_netManager.IsRunning) return;
 
         _netManager.Start(10515);
+        _networkTimer.Start();
     }
 
     private void Update()
     {
         _netManager.PollEvents();
+        _networkTimer.Update();
+    }
+
+    private void OnDestroy()
+    {
+        _netManager.Stop();
+        _networkTimer.Stop();
+    }
+
+    protected void OnNetworkUpdate()
+    {
+        _serverTick = (ushort)((_serverTick + 1) % NetworkGlobals.MaxGameSequence);
+        _playerManager.NetworkUpdate();
     }
 
     public void OnConnectionRequest(ConnectionRequest request)
@@ -88,10 +110,61 @@ public class NetworkServer : MonoBehaviour, INetEventListener
     public void OnPeerDisconnected(NetPeer peer, DisconnectInfo disconnectInfo)
     {
         Debug.Log("[S] Player disconnected: " + disconnectInfo.Reason);
+
+        if (peer.Tag != null)
+        {
+            byte playerId = (byte)peer.Id;
+            if (_playerManager.RemovePlayer(playerId))
+            {
+                PlayerDisconnectedPacket pdp = new PlayerDisconnectedPacket { Id = (byte)peer.Id };
+                _netManager.SendToAll(WritePacket(pdp), DeliveryMethod.ReliableOrdered);
+            }
+        }
     }
 
     private void OnJoinReceived(JoinPacket joinPacket, NetPeer peer)
     {
-        Debug.Log("[S] Join packet received: " + joinPacket.UserName);        
+        Debug.Log("[S] Join packet received: " + joinPacket.UserName);
+        ServerPlayer player = new ServerPlayer(joinPacket.UserName, peer);
+        _playerManager.AddPlayer(player);
+        player.Spawn();
+
+        // send accept of join
+        JoinAcceptPacket jap = new JoinAcceptPacket { Id = player.Id, ServerTick = _serverTick };
+        peer.Send(WritePacket(jap), DeliveryMethod.ReliableOrdered);
+
+        // notify other players of new player
+        PlayerJoinedPacket pj = new PlayerJoinedPacket
+        {
+            UserName = joinPacket.UserName,
+            InitialPlayerState = player.NetworkState
+        };
+        _netManager.SendToAll(WritePacket(pj), DeliveryMethod.ReliableOrdered, peer);
+
+        // send new player other player's info
+        foreach (ServerPlayer otherPlayer in _playerManager)
+        {
+            if (otherPlayer == player)
+                continue;
+            pj.UserName = otherPlayer.Name;
+            pj.InitialPlayerState = otherPlayer.NetworkState;
+            peer.Send(WritePacket(pj), DeliveryMethod.ReliableOrdered);
+        }
+    }
+
+    private NetDataWriter WriteSerializable<T>(PacketType type, T packet) where T : struct, INetSerializable
+    {
+        _writer.Reset();
+        _writer.Put((byte)type);
+        packet.Serialize(_writer);
+        return _writer;
+    }
+
+    private NetDataWriter WritePacket<T>(T packet) where T : class, new()
+    {
+        _writer.Reset();
+        _writer.Put((byte)PacketType.Serialized);
+        _packetProcessor.Write(_writer, packet);
+        return _writer;
     }
 }
