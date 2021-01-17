@@ -18,6 +18,8 @@ public class NetworkServer : MonoBehaviour, INetEventListener
     NetPacketProcessor _packetProcessor;
     NetworkTimer _networkTimer;
     ServerPlayerManager _playerManager;
+    ServerState _serverState;
+    PlayerInputPacket _cachedInputCommand;
 
     ushort _serverTick;
 
@@ -30,6 +32,9 @@ public class NetworkServer : MonoBehaviour, INetEventListener
         _writer = new NetDataWriter();
         _playerManager = new ServerPlayerManager();
         _packetProcessor = new NetPacketProcessor();
+        _serverState = new ServerState();
+        _cachedInputCommand = new PlayerInputPacket();
+        _packetProcessor.RegisterNestedType((w, v) => w.Put(v), r => r.GetVector3()); // register Vector3 as a serializable type
         _packetProcessor.RegisterNestedType<PlayerState>();
         _packetProcessor.SubscribeReusable<JoinPacket, NetPeer>(OnJoinReceived);
 
@@ -63,6 +68,24 @@ public class NetworkServer : MonoBehaviour, INetEventListener
     {
         _serverTick = (ushort)((_serverTick + 1) % NetworkGlobals.MaxGameSequence);
         _playerManager.NetworkUpdate();
+
+        // send server state to clients
+        if (_serverTick % 2 == 0) // send every other tick for bandwidth
+        {
+            _serverState.Tick = _serverTick;
+            _serverState.PlayerStates = _playerManager.PlayerStates;
+            
+            foreach(ServerPlayer p in _playerManager)
+            {
+                int statesMax = p.AssociatedPeer.GetMaxSinglePacketSize(DeliveryMethod.Unreliable) - ServerState.HeaderSize;
+                statesMax /= PlayerState.Size;
+
+                _serverState.LastProcessedCommand = p.LastProcessedCommandId;
+                _serverState.StartState = 0; // will need to update and handle this if packets get bigger than 1024
+                _serverState.PlayerStatesCount = _playerManager.Count;
+                p.AssociatedPeer.Send(WriteSerializable<ServerState>(PacketType.ServerState, _serverState), DeliveryMethod.Unreliable);
+            }
+        }
     }
 
     public void OnConnectionRequest(ConnectionRequest request)
@@ -90,6 +113,9 @@ public class NetworkServer : MonoBehaviour, INetEventListener
         {
             case PacketType.Serialized:
                 _packetProcessor.ReadAllPackets(reader, peer);
+                break;
+            case PacketType.Input:
+                OnInputReceived(reader, peer);
                 break;
             default:
                 Debug.Log("Unhandled packet: " + pt);
@@ -127,7 +153,7 @@ public class NetworkServer : MonoBehaviour, INetEventListener
         Debug.Log("[S] Join packet received: " + joinPacket.UserName);
         ServerPlayer player = new ServerPlayer(joinPacket.UserName, peer);
         _playerManager.AddPlayer(player);
-        player.Spawn();
+        player.Spawn(Vector3.zero);
 
         // send accept of join
         JoinAcceptPacket jap = new JoinAcceptPacket { Id = player.Id, ServerTick = _serverTick };
@@ -166,5 +192,17 @@ public class NetworkServer : MonoBehaviour, INetEventListener
         _writer.Put((byte)PacketType.Serialized);
         _packetProcessor.Write(_writer, packet);
         return _writer;
+    }
+
+    protected void OnInputReceived(NetPacketReader reader, NetPeer peer)
+    {
+        if (peer.Tag == null) return;
+
+        _cachedInputCommand.Deserialize(reader);
+
+        ServerPlayer player = (ServerPlayer)peer.Tag;
+        bool antiLagUsed = _playerManager.EnableAntilag(player);
+        player.ApplyInput(_cachedInputCommand, NetworkTimer.FixedDelta);
+        if (antiLagUsed) _playerManager.DisableAntilag();
     }
 }

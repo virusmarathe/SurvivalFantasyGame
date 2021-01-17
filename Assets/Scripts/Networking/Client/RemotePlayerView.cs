@@ -24,7 +24,9 @@ public class RemotePlayerView : MonoBehaviour, IPlayerView
     // Update is called once per frame
     void Update()
     {
-        
+        _player.UpdatePosition(Time.deltaTime);
+
+        transform.position = _player.Position;
     }
 
     public void Destroy()

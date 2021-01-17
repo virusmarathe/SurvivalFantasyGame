@@ -5,9 +5,9 @@ using UnityEngine;
 public class ServerPlayerManager : NetworkPlayerManager
 {
     public override int Count => _playersCount;
+    public PlayerState[] PlayerStates;
 
     ServerPlayer[] _players;
-    PlayerState[] PlayerStates;
     int _playersCount;
 
     public ServerPlayerManager()
@@ -65,5 +65,14 @@ public class ServerPlayerManager : NetworkPlayerManager
             p.Update(NetworkTimer.FixedDelta);
             PlayerStates[i] = p.NetworkState;
         }
+    }
+
+    public bool EnableAntilag(ServerPlayer forPlayer)
+    {
+        return false;
+    }
+
+    public void DisableAntilag()
+    {
     }
 }

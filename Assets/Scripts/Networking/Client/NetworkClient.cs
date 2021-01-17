@@ -14,6 +14,7 @@ public class NetworkClient : MonoBehaviour, INetEventListener
 
     static NetworkClient s_Instance;
     public static NetworkClient Instance { get { return s_Instance; } }
+    public NetworkTimer NetworkTimer => _networkTimer;
 
     NetManager _netManager;
     NetDataWriter _writer;
@@ -22,6 +23,7 @@ public class NetworkClient : MonoBehaviour, INetEventListener
     NetPeer _server;
     NetworkTimer _networkTimer;
     ClientPlayerManager _playerManager;
+    ServerState _cachedServerState;
 
     int _ping;
     string _userName;
@@ -35,8 +37,10 @@ public class NetworkClient : MonoBehaviour, INetEventListener
         _networkTimer = new NetworkTimer(OnNetworkUpdate);
         _writer = new NetDataWriter();
         _playerManager = new ClientPlayerManager();
+        _cachedServerState = new ServerState();
 
         _packetProcessor = new NetPacketProcessor();
+        _packetProcessor.RegisterNestedType((w, v) => w.Put(v), r => r.GetVector3()); // register Vector3 as a serializable type
         _packetProcessor.RegisterNestedType<PlayerState>();
         _packetProcessor.SubscribeReusable<PlayerJoinedPacket>(OnPlayerJoined);
         _packetProcessor.SubscribeReusable<JoinAcceptPacket>(OnJoinAccept);
@@ -66,6 +70,14 @@ public class NetworkClient : MonoBehaviour, INetEventListener
     protected void OnNetworkUpdate()
     {
         _playerManager.NetworkUpdate();
+    }
+
+    protected void OnServerState()
+    {
+        //skip duplicate or old because we received that packet unreliably
+        if (NetworkGlobals.SeqDiff(_cachedServerState.Tick, _lastServerTick) <= 0) return;
+        _lastServerTick = _cachedServerState.Tick;
+        _playerManager.ApplyPlayerState(ref _cachedServerState);
     }
 
     public void ConnectToServer(string ip, Action<DisconnectInfo> callback)
@@ -99,6 +111,10 @@ public class NetworkClient : MonoBehaviour, INetEventListener
         {
             case PacketType.Serialized:
                 _packetProcessor.ReadAllPackets(reader);
+                break;
+            case PacketType.ServerState:
+                _cachedServerState.Deserialize(reader);
+                OnServerState();
                 break;
             default:
                 Debug.Log("Unhandled packet: " + pt);

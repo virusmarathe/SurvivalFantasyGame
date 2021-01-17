@@ -5,6 +5,7 @@ using UnityEngine;
 public class ClientPlayerView : MonoBehaviour, IPlayerView
 {
     [SerializeField] private TextMesh _name;
+    [SerializeField] Transform CameraRoot;
     private ClientPlayer _player;
     private Camera _mainCamera;
 
@@ -20,6 +21,9 @@ public class ClientPlayerView : MonoBehaviour, IPlayerView
     // Start is called before the first frame update
     void Start()
     {
+        _mainCamera.transform.parent = CameraRoot;
+        _mainCamera.transform.localPosition = Vector3.zero;
+        _mainCamera.transform.localRotation = Quaternion.identity;
     }
 
     // Update is called once per frame
@@ -30,6 +34,9 @@ public class ClientPlayerView : MonoBehaviour, IPlayerView
         float jump = Input.GetAxis("Jump");
 
         _player.SetInput(xVal, yVal, jump);
+
+        float lerpT = NetworkClient.Instance.NetworkTimer.LerpAlpha;
+        transform.position = Vector3.Lerp(_player.LastPosition, _player.Position, lerpT);
     }
 
     public void Destroy()

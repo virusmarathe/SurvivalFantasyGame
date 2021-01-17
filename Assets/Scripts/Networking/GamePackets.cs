@@ -5,7 +5,8 @@ using UnityEngine;
 public enum PacketType : byte
 {
     Serialized,
-    Input
+    Input,
+    ServerState
 }
 
 public class JoinPacket
@@ -33,16 +34,16 @@ public class PlayerDisconnectedPacket
 public struct PlayerState : INetSerializable
 {
     public byte Id;
-    //public Vector2 Position;
+    public Vector3 Position;
     //public float Rotation;
     public ushort Tick;
 
-    public const int Size = 1 + 2; //1 + 8 + 4 + 2;
+    public const int Size = 1 + 12 + 2; // byte + vector3 + ushort
 
     public void Serialize(NetDataWriter writer)
     {
         writer.Put(Id);
-        //writer.Put(Position);
+        writer.Put(Position);
         //writer.Put(Rotation);
         writer.Put(Tick);
     }
@@ -50,7 +51,7 @@ public struct PlayerState : INetSerializable
     public void Deserialize(NetDataReader reader)
     {
         Id = reader.GetByte();
-        //Position = reader.GetVector2();
+        Position = reader.GetVector3();
         //Rotation = reader.GetFloat();
         Tick = reader.GetUShort();
     }
@@ -84,5 +85,46 @@ public struct PlayerInputPacket : INetSerializable
         Id = reader.GetUShort();
         Input = (MovementKeys)reader.GetByte();
         ServerTick = reader.GetUShort();
+    }
+}
+
+public struct ServerState : INetSerializable
+{
+    public ushort Tick;
+    public ushort LastProcessedCommand;
+
+    public int PlayerStatesCount;
+    public int StartState; //server only
+    public PlayerState[] PlayerStates;
+
+    //tick
+    public const int HeaderSize = sizeof(ushort) * 2;
+
+    public void Serialize(NetDataWriter writer)
+    {
+        writer.Put(Tick);
+        writer.Put(LastProcessedCommand);
+
+        for (int i = StartState; i < PlayerStatesCount; i++)
+        {
+            PlayerStates[i].Serialize(writer);
+        }
+    }
+
+    public void Deserialize(NetDataReader reader)
+    {
+        Tick = reader.GetUShort();
+        LastProcessedCommand = reader.GetUShort();
+
+        PlayerStatesCount = reader.AvailableBytes / PlayerState.Size;
+        if (PlayerStates == null || PlayerStates.Length < PlayerStatesCount)
+        {
+            PlayerStates = new PlayerState[PlayerStatesCount];
+        }
+
+        for (int i = 0; i < PlayerStatesCount; i++)
+        {
+            PlayerStates[i].Deserialize(reader);
+        }
     }
 }

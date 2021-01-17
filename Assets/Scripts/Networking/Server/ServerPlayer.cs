@@ -7,6 +7,7 @@ public class ServerPlayer : NetworkPlayer
 {
     public NetPeer AssociatedPeer;
     public PlayerState NetworkState;
+    public ushort LastProcessedCommandId { get; private set; }
 
     public ServerPlayer(string name, NetPeer peer) : base(name, (byte)peer.Id)
     {
@@ -18,5 +19,16 @@ public class ServerPlayer : NetworkPlayer
     public override void Update(float delta)
     {
         base.Update(delta);
+        NetworkState.Position = _position;
+        NetworkState.Tick = LastProcessedCommandId;
+    }
+
+    public override void ApplyInput(PlayerInputPacket command, float delta)
+    {
+        if (NetworkGlobals.SeqDiff(command.Id, LastProcessedCommandId) <= 0) return;
+
+        LastProcessedCommandId = command.Id;
+
+        base.ApplyInput(command, delta);
     }
 }

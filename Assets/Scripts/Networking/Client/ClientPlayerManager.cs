@@ -77,4 +77,22 @@ public class ClientPlayerManager : NetworkPlayerManager
             p.View.Destroy();
         _players.Clear();
     }
+
+    public void ApplyPlayerState(ref ServerState serverState)
+    {
+        for (int i = 0; i < serverState.PlayerStatesCount; i++)
+        {
+            PlayerState state = serverState.PlayerStates[i];
+            if (!_players.TryGetValue(state.Id, out PlayerHandler handler)) return; // got id that doesn't exist
+
+            if (handler.Player == _clientPlayer)
+            {
+                _clientPlayer.ApplyPlayerState(serverState, state);
+            }
+            else
+            {
+                ((RemotePlayer)handler.Player).OnPlayerState(state);
+            }
+        }
+    }
 }
