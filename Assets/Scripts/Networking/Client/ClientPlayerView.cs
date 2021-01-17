@@ -37,6 +37,9 @@ public class ClientPlayerView : MonoBehaviour, IPlayerView
 
         float lerpT = NetworkClient.Instance.NetworkTimer.LerpAlpha;
         transform.position = Vector3.Lerp(_player.LastPosition, _player.Position, lerpT);
+
+        float horizontal = Input.GetAxis("Mouse X") * 5;
+        transform.Rotate(0, horizontal, 0);
     }
 
     public void Destroy()
