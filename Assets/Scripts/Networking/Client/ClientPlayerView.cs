@@ -20,13 +20,16 @@ public class ClientPlayerView : MonoBehaviour, IPlayerView
     // Start is called before the first frame update
     void Start()
     {
-        
     }
 
     // Update is called once per frame
     void Update()
     {
-        
+        float xVal = Input.GetAxis("Horizontal");
+        float yVal = Input.GetAxis("Vertical");
+        float jump = Input.GetAxis("Jump");
+
+        _player.SetInput(xVal, yVal, jump);
     }
 
     public void Destroy()

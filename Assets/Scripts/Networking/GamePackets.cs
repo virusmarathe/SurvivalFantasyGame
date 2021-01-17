@@ -4,7 +4,8 @@ using UnityEngine;
 
 public enum PacketType : byte
 {
-    Serialized
+    Serialized,
+    Input
 }
 
 public class JoinPacket
@@ -52,5 +53,36 @@ public struct PlayerState : INetSerializable
         //Position = reader.GetVector2();
         //Rotation = reader.GetFloat();
         Tick = reader.GetUShort();
+    }
+}
+
+[Flags]
+public enum MovementKeys : byte
+{
+    Left = 1 << 1,
+    Right = 1 << 2,
+    Up = 1 << 3,
+    Down = 1 << 4,
+    Jump = 1 << 5
+}
+
+public struct PlayerInputPacket : INetSerializable
+{
+    public ushort Id;
+    public MovementKeys Input;
+    public ushort ServerTick;
+
+    public void Serialize(NetDataWriter writer)
+    {
+        writer.Put(Id);
+        writer.Put((byte)Input);
+        writer.Put(ServerTick);
+    }
+
+    public void Deserialize(NetDataReader reader)
+    {
+        Id = reader.GetUShort();
+        Input = (MovementKeys)reader.GetByte();
+        ServerTick = reader.GetUShort();
     }
 }
