@@ -11,6 +11,8 @@ public class RemotePlayer : NetworkPlayer
 
     public RemotePlayer(string name, PlayerJoinedPacket pjPacket) : base(name, pjPacket.InitialPlayerState.Id)
     {
+        _position = pjPacket.InitialPlayerState.Position;
+        _rotation = pjPacket.InitialPlayerState.Rotation;
         _buffer.Add(pjPacket.InitialPlayerState);
     }
 
@@ -31,6 +33,7 @@ public class RemotePlayer : NetworkPlayer
         float lerpTime = NetworkGlobals.SeqDiff(dataB.Tick, dataA.Tick) * NetworkTimer.FixedDelta;
         float t = _timer / lerpTime;
         _position = Vector3.Lerp(dataA.Position, dataB.Position, t);
+        _rotation = Quaternion.Slerp(dataA.Rotation, dataB.Rotation, t);
         _timer += delta;
         if (_timer > lerpTime)
         {

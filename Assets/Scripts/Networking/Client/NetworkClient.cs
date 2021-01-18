@@ -41,6 +41,7 @@ public class NetworkClient : MonoBehaviour, INetEventListener
 
         _packetProcessor = new NetPacketProcessor();
         _packetProcessor.RegisterNestedType((w, v) => w.Put(v), r => r.GetVector3()); // register Vector3 as a serializable type
+        _packetProcessor.RegisterNestedType((w, q) => w.Put(q), r => r.GetQuaternion()); // register Quaternion
         _packetProcessor.RegisterNestedType<PlayerState>();
         _packetProcessor.SubscribeReusable<PlayerJoinedPacket>(OnPlayerJoined);
         _packetProcessor.SubscribeReusable<JoinAcceptPacket>(OnJoinAccept);

@@ -20,6 +20,7 @@ public class ServerPlayer : NetworkPlayer
     {
         base.Update(delta);
         NetworkState.Position = _position;
+        NetworkState.Rotation = _rotation;
         NetworkState.Tick = LastProcessedCommandId;
     }
 

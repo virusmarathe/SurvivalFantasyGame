@@ -15,6 +15,7 @@ public class ClientPlayer : NetworkPlayer
     int _updateCount;
 
     public Vector3 LastPosition { get; private set; }
+    public Quaternion LastRotation { get; private set; }
     public int StoredCommands => _predictionPlayerStates.Count;
 
     public ClientPlayer(ClientPlayerManager manager, string name, byte id) : base(name, id)
@@ -33,6 +34,7 @@ public class ClientPlayer : NetworkPlayer
         base.Update(delta);
 
         LastPosition = _position;
+        LastRotation = _rotation;
 
         // send packet
         _nextInputPacket.Id = (ushort)((_nextInputPacket.Id + 1) % NetworkGlobals.MaxGameSequence);
@@ -57,7 +59,7 @@ public class ClientPlayer : NetworkPlayer
         }
     }
 
-    public void SetInput(float xVal, float yVal, float jumpVal)
+    public void SetInput(float xVal, float yVal, float jumpVal, Quaternion rotation)
     {
         _nextInputPacket.Input = 0;
 
@@ -81,6 +83,8 @@ public class ClientPlayer : NetworkPlayer
         {
             _nextInputPacket.Input |= MovementKeys.Jump;
         }
+
+        _nextInputPacket.Rotation = rotation;
     }
 
     public void ApplyPlayerState(ServerState serverState, PlayerState playerState)
@@ -96,6 +100,7 @@ public class ClientPlayer : NetworkPlayer
 
         _lastServerState = serverState;
         _position = playerState.Position;
+        _rotation = playerState.Rotation;
 
         if (_predictionPlayerStates.Count == 0)
             return;

@@ -27,6 +27,7 @@ public class RemotePlayerView : MonoBehaviour, IPlayerView
         _player.UpdatePosition(Time.deltaTime);
 
         transform.position = _player.Position;
+        transform.rotation = _player.Rotation;
     }
 
     public void Destroy()

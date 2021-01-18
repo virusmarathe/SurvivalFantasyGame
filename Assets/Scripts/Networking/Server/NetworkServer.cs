@@ -35,6 +35,7 @@ public class NetworkServer : MonoBehaviour, INetEventListener
         _serverState = new ServerState();
         _cachedInputCommand = new PlayerInputPacket();
         _packetProcessor.RegisterNestedType((w, v) => w.Put(v), r => r.GetVector3()); // register Vector3 as a serializable type
+        _packetProcessor.RegisterNestedType((w, q) => w.Put(q), r => r.GetQuaternion()); // register Quaternion
         _packetProcessor.RegisterNestedType<PlayerState>();
         _packetProcessor.SubscribeReusable<JoinPacket, NetPeer>(OnJoinReceived);
 

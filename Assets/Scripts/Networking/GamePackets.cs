@@ -35,16 +35,16 @@ public struct PlayerState : INetSerializable
 {
     public byte Id;
     public Vector3 Position;
-    //public float Rotation;
+    public Quaternion Rotation;
     public ushort Tick;
 
-    public const int Size = 1 + 12 + 2; // byte + vector3 + ushort
+    public const int Size = 1 + 12 + 16 + 2; // byte + vector3 + quat + ushort
 
     public void Serialize(NetDataWriter writer)
     {
         writer.Put(Id);
         writer.Put(Position);
-        //writer.Put(Rotation);
+        writer.Put(Rotation);
         writer.Put(Tick);
     }
 
@@ -52,7 +52,7 @@ public struct PlayerState : INetSerializable
     {
         Id = reader.GetByte();
         Position = reader.GetVector3();
-        //Rotation = reader.GetFloat();
+        Rotation = reader.GetQuaternion();
         Tick = reader.GetUShort();
     }
 }
@@ -71,12 +71,14 @@ public struct PlayerInputPacket : INetSerializable
 {
     public ushort Id;
     public MovementKeys Input;
+    public Quaternion Rotation;
     public ushort ServerTick;
 
     public void Serialize(NetDataWriter writer)
     {
         writer.Put(Id);
         writer.Put((byte)Input);
+        writer.Put(Rotation);
         writer.Put(ServerTick);
     }
 
@@ -84,6 +86,7 @@ public struct PlayerInputPacket : INetSerializable
     {
         Id = reader.GetUShort();
         Input = (MovementKeys)reader.GetByte();
+        Rotation = reader.GetQuaternion();
         ServerTick = reader.GetUShort();
     }
 }
