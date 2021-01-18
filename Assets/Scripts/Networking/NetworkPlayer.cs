@@ -54,5 +54,11 @@ public abstract class NetworkPlayer
 
         _position += (velocity * _speed * delta);
         _rotation = command.Rotation;
+
+        RaycastHit hit;
+        if (Physics.Raycast(_position + new Vector3(0,2,0), new Vector3(0, -1, 0), out hit, 40.0f, 1 << LayerMask.NameToLayer("Terrain")))
+        {
+            _position = new Vector3(_position.x, hit.point.y + 0.6f, _position.z);
+        }
     }
 }
