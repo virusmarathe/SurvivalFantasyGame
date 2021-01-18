@@ -13,7 +13,7 @@ public abstract class NetworkPlayer
 
     protected Vector3 _position;
     protected Quaternion _rotation;
-    protected float _speed = 3f;
+    protected float _speed = 5f;
 
     protected NetworkPlayer(string name, byte id)
     {
@@ -36,8 +36,8 @@ public abstract class NetworkPlayer
     {
         Vector3 velocity = Vector3.zero;
         float yRot = command.Rotation.eulerAngles.y * Mathf.Deg2Rad;
-        Vector3 right = new Vector3(Mathf.Cos(yRot), 0, Mathf.Sin(yRot));
         Vector3 forward = new Vector3(Mathf.Sin(yRot), 0, Mathf.Cos(yRot));
+        Vector3 right = Vector3.Cross(Vector3.up, forward);
 
         if ((command.Input & MovementKeys.Left) != 0) velocity.x = -1f;
         if ((command.Input & MovementKeys.Right) != 0) velocity.x = 1f;
