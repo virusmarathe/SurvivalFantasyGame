@@ -154,7 +154,7 @@ public class NetworkServer : MonoBehaviour, INetEventListener
         Debug.Log("[S] Join packet received: " + joinPacket.UserName);
         ServerPlayer player = new ServerPlayer(joinPacket.UserName, peer);
         _playerManager.AddPlayer(player);
-        player.Spawn(Vector3.zero);
+        player.Spawn(new Vector3(0, 0.6f, 0));
 
         // send accept of join
         JoinAcceptPacket jap = new JoinAcceptPacket { Id = player.Id, ServerTick = _serverTick };

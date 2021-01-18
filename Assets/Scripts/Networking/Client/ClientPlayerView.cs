@@ -33,6 +33,7 @@ public class ClientPlayerView : MonoBehaviour, IPlayerView
         float yVal = Input.GetAxis("Vertical");
         float jump = Input.GetAxis("Jump");
         float horizontal = Input.GetAxis("Mouse X") * .03f;
+        float vertical = Input.GetAxis("Mouse Y") * -3;
         Quaternion rot = transform.rotation * new Quaternion(0,horizontal,0,1);
         _player.SetInput(xVal, yVal, jump, rot);
 
@@ -40,6 +41,11 @@ public class ClientPlayerView : MonoBehaviour, IPlayerView
         transform.position = Vector3.Lerp(_player.LastPosition, _player.Position, lerpT);
         //rot = Quaternion.Slerp(_player.LastRotation, _player.Rotation, lerpT);
         transform.rotation = rot;
+        CameraRoot.Rotate(new Vector3(vertical, 0, 0));
+        Quaternion finalRot = CameraRoot.localRotation;
+        float xFinal = Mathf.Clamp(finalRot.x, -0.35f, 0.35f);
+        finalRot.x = xFinal;
+        CameraRoot.localRotation = finalRot;
     }
 
     public void Destroy()
