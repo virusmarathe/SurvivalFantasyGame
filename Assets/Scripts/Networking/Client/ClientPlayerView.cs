@@ -32,13 +32,13 @@ public class ClientPlayerView : MonoBehaviour, IPlayerView
         float xVal = Input.GetAxis("Horizontal");
         float yVal = Input.GetAxis("Vertical");
         float jump = Input.GetAxis("Jump");
-        float horizontal = Input.GetAxis("Mouse X") * .1f;
+        float horizontal = Input.GetAxis("Mouse X") * .03f;
         Quaternion rot = transform.rotation * new Quaternion(0,horizontal,0,1);
         _player.SetInput(xVal, yVal, jump, rot);
 
         float lerpT = NetworkClient.Instance.NetworkTimer.LerpAlpha;
         transform.position = Vector3.Lerp(_player.LastPosition, _player.Position, lerpT);
-        rot = Quaternion.Slerp(_player.LastRotation, _player.Rotation, lerpT);
+        //rot = Quaternion.Slerp(_player.LastRotation, _player.Rotation, lerpT);
         transform.rotation = rot;
     }
 
