@@ -14,6 +14,10 @@ public abstract class NetworkPlayer
     protected Vector3 _position;
     protected Quaternion _rotation;
     protected float _speed = 5f;
+    protected bool _grounded = true;
+
+    float _fallingTimer = 0f;
+    float _initVelocity = 0f;
 
     protected NetworkPlayer(string name, byte id)
     {
@@ -45,20 +49,38 @@ public abstract class NetworkPlayer
         if ((command.Input & MovementKeys.Up) != 0) velocity.z = 1f;
         if ((command.Input & MovementKeys.Jump) != 0)
         {
-
+            if (_grounded)
+            {
+                _grounded = false;
+                _initVelocity = 4;
+            }
         }
 
         forward *= velocity.z;
         right *= velocity.x;
-        velocity = (forward + right).normalized;
+        velocity = (forward + right);
+        velocity = velocity.normalized;
+
+        if (!_grounded)
+        {
+            velocity.y += _initVelocity  + (- 9.8f * _fallingTimer);
+        }
 
         _position += (velocity * _speed * delta);
         _rotation = command.Rotation;
 
         RaycastHit hit;
-        if (Physics.Raycast(_position + new Vector3(0,2,0), new Vector3(0, -1, 0), out hit, 40.0f, 1 << LayerMask.NameToLayer("Terrain")))
+        if (Physics.Raycast(_position + new Vector3(0,2,0), new Vector3(0, -1, 0), out hit, 2.6f, 1 << LayerMask.NameToLayer("Terrain")))
         {
             _position = new Vector3(_position.x, hit.point.y + 0.6f, _position.z);
+            _grounded = true;
+            _fallingTimer = 0;
+            _initVelocity = 0;
+        }
+        else
+        {
+            _grounded = false;
+            _fallingTimer += delta;
         }
     }
 }

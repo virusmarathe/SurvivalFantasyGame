@@ -99,8 +99,18 @@ public class ClientPlayer : NetworkPlayer
             return;
 
         _lastServerState = serverState;
-        _position = playerState.Position;
-        _rotation = playerState.Rotation;
+        if (playerState.Id != Id)
+        {
+            _position = playerState.Position;
+            _rotation = playerState.Rotation;
+        }
+        else
+        {
+            Vector3 pos = playerState.Position;
+            pos.y = _position.y;
+            _position = pos;
+            _rotation = playerState.Rotation;
+        }
 
         if (_predictionPlayerStates.Count == 0)
             return;
@@ -114,7 +124,9 @@ public class ClientPlayer : NetworkPlayer
             //Debug.Log($"[OK]  SP: {serverState.LastProcessedCommand}, OUR: {_predictionPlayerStates.First.Id}, DF:{diff}");
             _predictionPlayerStates.RemoveFromStart(diff + 1);
             foreach (PlayerInputPacket state in _predictionPlayerStates)
+            {
                 ApplyInput(state, NetworkTimer.FixedDelta);
+            }
         }
         else if (diff >= _predictionPlayerStates.Count)
         {
