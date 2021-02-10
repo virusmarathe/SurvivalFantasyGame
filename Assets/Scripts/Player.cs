@@ -14,6 +14,11 @@ public class Player : NetworkBehaviour
     float _jumpCDTimer = 0f;
     float _speed;
 
+    private void Start()
+    {
+        GameManager.Instance.RegisterPlayer(this);
+    }
+
     void Update()
     {
         if (!isLocalPlayer)
